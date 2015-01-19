@@ -19,7 +19,9 @@
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
-
+#include <emmintrin.h>
+#include <tmmintrin.h>
+#include <smmintrin.h>
 #include "get_bits.h"
 #include "hevc.h"
 
@@ -355,7 +357,70 @@ static void FUNC(sao_band_filter_0)(uint8_t *_dst, uint8_t *_src,
 }
 
 #define CMP(a, b) ((a) > (b) ? 1 : ((a) == (b) ? 0 : -1))
+static void FUNC(sao_edge_filter_sse)(uint8_t *_dst, uint8_t *_src,
+                                  ptrdiff_t stride_dst, ptrdiff_t stride_src, SAOParams *sao,
+                                  int width, int height,
+                                  int c_idx, int init_x, int init_y BIT_DEPTH_PARAM) {
 
+    static const uint8_t edge_idx[] = { 1, 2, 0, 3, 4 };
+    static const int8_t pos[4][2][2] = {
+        { { -1,  0 }, {  1, 0 } }, // horizontal
+        { {  0, -1 }, {  0, 1 } }, // vertical
+        { { -1, -1 }, {  1, 1 } }, // 45 degree
+        { {  1, -1 }, { -1, 1 } }, // 135 degree
+    };
+    int16_t *sao_offset_val = sao->offset_val[c_idx];
+    int sao_eo_class    = sao->eo_class[c_idx];
+    pixel *dst = (pixel *)_dst;
+    pixel *src = (pixel *)_src;
+
+    int y_stride_src = init_y * stride_src;
+    int y_stride_dst = init_y * stride_dst;
+    int pos_0_0  = pos[sao_eo_class][0][0];
+    int pos_0_1  = pos[sao_eo_class][0][1];
+    int pos_1_0  = pos[sao_eo_class][1][0];
+    int pos_1_1  = pos[sao_eo_class][1][1];
+    int x, y;
+    __m128i x0, x1, x2, x3;
+    __m128i cmp0, cmp1, r2;
+    int yu,u;uint8_t inter[16];
+    int y_stride_0_1 = (init_y + pos_0_1) * stride_src;
+    int y_stride_1_1 = (init_y + pos_1_1) * stride_src;
+    yu=(width-init_x)%16;
+    for (y = init_y; y < height; y++) {
+        for (x = init_x; x < width-yu; x+=16)
+        {
+                x0   = _mm_loadu_si128((__m128i *) (src + x + y_stride_src));
+                cmp0 = _mm_loadu_si128((__m128i *) (src + x + y_stride_0_1));
+                cmp1 = _mm_loadu_si128((__m128i *) (src + x + y_stride_1_1));
+                r2 = _mm_min_epu8(x0, cmp0);
+                x1 = _mm_cmpeq_epi8(cmp0, r2);
+                x2 = _mm_cmpeq_epi8(x0, r2);
+                x1 = _mm_sub_epi8(x2, x1);
+                r2 = _mm_min_epu8(x0, cmp1);
+                x3 = _mm_cmpeq_epi8(cmp1, r2);
+                x2 = _mm_cmpeq_epi8(x0, r2);
+                x3 = _mm_sub_epi8(x2, x3);
+                x1 = _mm_add_epi8(x1, x3);
+                x1 = _mm_add_epi8(x1, _mm_set1_epi8(2)); 
+                _mm_storeu_si128((__m128i *) (inter), x1);	
+                for(u=0;u<16;u++)
+                {
+                  dst[x + y_stride_dst+u] = av_clip_pixel(src[x + y_stride_src+u]+sao_offset_val[edge_idx[inter[u]]]);
+                }
+        }
+        for (x = width-yu; x < width; x++) {
+            int diff0             = CMP(src[x + y_stride_src], src[x + pos_0_0 + y_stride_0_1]);
+            int diff1             = CMP(src[x + y_stride_src], src[x + pos_1_0 + y_stride_1_1]);
+            int offset_val        = edge_idx[2 + diff0 + diff1];
+            dst[x + y_stride_dst] = av_clip_pixel(src[x + y_stride_src] + sao_offset_val[offset_val]);
+        }
+        y_stride_src += stride_src;
+        y_stride_dst += stride_dst;
+        y_stride_0_1 += stride_src;
+        y_stride_1_1 += stride_src;
+    }
+}
 static void FUNC(sao_edge_filter)(uint8_t *_dst, uint8_t *_src,
                                   ptrdiff_t stride_dst, ptrdiff_t stride_src, SAOParams *sao,
                                   int width, int height,
