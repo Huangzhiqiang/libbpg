@@ -21,6 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+ #include <emmintrin.h>
+
+#include <tmmintrin.h>
+
+#include <smmintrin.h>
 #include <math.h>
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
@@ -691,93 +696,54 @@ static void interp2p0_simple16(PIXEL *dst, const int16_t *src, int n, int bit_de
    samples. */
 static void interp2p1_simple(PIXEL *dst, const PIXEL *src, int n, int bit_depth)
 {
-    int pixel_max, a0, a1, a2, a3, a4, a5, a6;
+    int pixel_max;
 
     pixel_max = (1 << bit_depth) - 1;
 
-    a1 = src[-3];
-    a2 = src[-2];
-    a3 = src[-1];
-    a4 = src[0];
-    a5 = src[1];
-    a6 = src[2];
-
-    while (n >= 2) {
-        a0 = a1;
-        a1 = a2;
-        a2 = a3;
-        a3 = a4;
-        a4 = a5;
-        a5 = a6;
-        a6 = src[3];
-        dst[0] = clamp_pix((a0 * IP1C6 + a1 * IP1C5 + a2 * IP1C4 + a3 * IP1C3 + 
-                            a4 * IP1C2 + a5 * IP1C1 + a6 * IP1C0 + 32) >> 6, 
+   while (n >= 2) {
+      
+		dst[0] = clamp_pix((src[-3] * IP1C6 + src[-2] * IP1C5 + src[-1] * IP1C4 + src[0] * IP1C3 +
+			src[1] * IP1C2 + src[2] * IP1C1 + src[3] * IP1C0 + 32) >> 6,
                            pixel_max);
-        dst[1] = clamp_pix((a0 * IP1C0 + a1 * IP1C1 + a2 * IP1C2 + a3 * IP1C3 +
-                            a4 * IP1C4 + a5 * IP1C5 + a6 * IP1C6 + 32) >> 6, 
+		dst[1] = clamp_pix((src[-3] * IP1C0 + src[-2] * IP1C1 + src[-1] * IP1C2 + src[0] * IP1C3 +
+			src[1] * IP1C4 + src[2] * IP1C5 + src[3] * IP1C6 + 32) >> 6,
                            pixel_max);
         dst += 2;
         src++;
         n -= 2;
     }
-    if (n) {
-        a0 = a1;
-        a1 = a2;
-        a2 = a3;
-        a3 = a4;
-        a4 = a5;
-        a5 = a6;
-        a6 = src[3];
-        dst[0] = clamp_pix((a0 * IP1C6 + a1 * IP1C5 + a2 * IP1C4 + a3 * IP1C3 + 
-                            a4 * IP1C2 + a5 * IP1C1 + a6 * IP1C0 + 32) >> 6, 
+    if (n) {     
+		dst[0] = clamp_pix((src[-3] * IP1C6 + src[-2] * IP1C5 + src[-1] * IP1C4 + src[0] * IP1C3 +
+			src[1] * IP1C2 + src[2] * IP1C1 + src[3] * IP1C0 + 32) >> 6,
                            pixel_max);
     }
+
+   
 }
 
 static void interp2p1_simple16(PIXEL *dst, const int16_t *src, int n, 
                                int bit_depth)
 {
-    int shift, offset, pixel_max, a0, a1, a2, a3, a4, a5, a6;
+    int shift, offset, pixel_max;
 
     pixel_max = (1 << bit_depth) - 1;
     shift = 20 - bit_depth;
     offset = 1 << (shift - 1);
 
-    a1 = src[-3];
-    a2 = src[-2];
-    a3 = src[-1];
-    a4 = src[0];
-    a5 = src[1];
-    a6 = src[2];
-
-    while (n >= 2) {
-        a0 = a1;
-        a1 = a2;
-        a2 = a3;
-        a3 = a4;
-        a4 = a5;
-        a5 = a6;
-        a6 = src[3];
-        dst[0] = clamp_pix((a0 * IP1C6 + a1 * IP1C5 + a2 * IP1C4 + a3 * IP1C3 +
-                            a4 * IP1C2 + a5 * IP1C1 + a6 * IP1C0 + offset) >> shift,
-                           pixel_max);
-        dst[1] = clamp_pix((a0 * IP1C0 + a1 * IP1C1 + a2 * IP1C2 + a3 * IP1C3 +
-                            a4 * IP1C4 + a5 * IP1C5 + a6 * IP1C6 + offset) >> shift,
-                           pixel_max);
-        dst += 2;
-        src++;
-        n -= 2;
+     while (n >= 2) {
+		dst[0] = clamp_pix((src[-3] * IP1C6 + src[-2] * IP1C5 + src[-1] * IP1C4 + src[0] * IP1C3 +
+			src[1] * IP1C2 + src[2] * IP1C1 + src[3] * IP1C0 + offset) >> shift,
+			pixel_max);
+		dst[1] = clamp_pix((src[-3] * IP1C0 + src[-2] * IP1C1 + src[-1] * IP1C2 + src[0] * IP1C3 +
+			src[1] * IP1C4 + src[2] * IP1C5 + src[3] * IP1C6 + offset) >> shift,
+			pixel_max);
+		dst += 2 ;
+		src ++;
+		n -= 2 ;
     }
-    if (n) {
-        a0 = a1;
-        a1 = a2;
-        a2 = a3;
-        a3 = a4;
-        a4 = a5;
-        a5 = a6;
-        a6 = src[3];
-        dst[0] = clamp_pix((a0 * IP1C6 + a1 * IP1C5 + a2 * IP1C4 + a3 * IP1C3 +
-                            a4 * IP1C2 + a5 * IP1C1 + a6 * IP1C0 + offset) >> shift, 
+    if (n) {    
+		dst[0] = clamp_pix((src[-3] * IP1C6 + src[-2] * IP1C5 + src[-1] * IP1C4 + src[0] * IP1C3 +
+			src[1] * IP1C2 + src[2] * IP1C1 + src[3] * IP1C0 + offset) >> shift,
                            pixel_max);
     }
 }
@@ -864,9 +830,10 @@ static void ycc_to_rgb24(ColorConvertState *s, uint8_t *dst, const PIXEL *y_ptr,
                          int n, int incr)
 {
     uint8_t *q = dst;
-    int y_val, cb_val, cr_val, x;
-    int c_r_cr, c_g_cb, c_g_cr, c_b_cb, rnd, shift, center, c_one;
-
+    int y_val, cb_val, cr_val;
+    int c_r_cr, c_g_cb, c_g_cr, c_b_cb, rnd, shift, center, c_one, x,yu,i;
+	__m128i x0,xl,xh,y0,yl,yh,z0,zl,zh,ql,qh,one_m,center_m,rnd_m,crr_m,cgb_m,cgr_m,cbb_m;
+	int inter[4];
     c_r_cr = s->c_r_cr;
     c_g_cb = s->c_g_cb;
     c_g_cr = s->c_g_cr;
@@ -875,7 +842,82 @@ static void ycc_to_rgb24(ColorConvertState *s, uint8_t *dst, const PIXEL *y_ptr,
     rnd = s->y_offset;
     shift = s->c_shift;
     center = s->c_center;
-    for(x = 0; x < n; x++) {
+	yu=n%8;
+	one_m=_mm_set1_epi32(c_one);
+	center_m=_mm_set1_epi32(center);
+	rnd_m=_mm_set1_epi32(rnd);
+	crr_m=_mm_set1_epi32(c_r_cr);
+	cgb_m=_mm_set1_epi32(c_g_cb);
+	cgr_m=_mm_set1_epi32(c_g_cr);
+	cbb_m=_mm_set1_epi32(c_b_cb);
+	for(x=0;x<n-yu;x+=8)
+	{
+		x0   = _mm_loadu_si128((__m128i *) (y_ptr + x ));
+		xl	 = _mm_unpacklo_epi16( x0,_mm_setzero_si128());
+		xh	 = _mm_unpackhi_epi16( x0,_mm_setzero_si128());
+		xl	 = _mm_mullo_epi32(xl,one_m);
+		xh	 = _mm_mullo_epi32(xh,one_m);
+		
+		y0   = _mm_loadu_si128((__m128i *) (cb_ptr + x ));
+		yl	 = _mm_unpacklo_epi16( y0,_mm_setzero_si128());
+		yh	 = _mm_unpackhi_epi16( y0,_mm_setzero_si128());
+		yl	 = _mm_sub_epi32(yl,center_m);
+		yh	 = _mm_sub_epi32(yh,center_m);
+		
+		z0   = _mm_loadu_si128((__m128i *) (cr_ptr + x ));
+		zl	 = _mm_unpacklo_epi16( z0,_mm_setzero_si128());
+		zh	 = _mm_unpackhi_epi16( z0,_mm_setzero_si128());
+		zl	 = _mm_sub_epi32(zl,center_m);
+		zh	 = _mm_sub_epi32(zh,center_m);
+
+		ql	 = _mm_add_epi32(xl,_mm_add_epi32(rnd_m,_mm_mullo_epi32(zl,crr_m)));
+		ql	 = _mm_srai_epi32(ql,shift);
+		qh	 = _mm_add_epi32(xh,_mm_add_epi32(rnd_m,_mm_mullo_epi32(zh,crr_m)));
+		qh	 = _mm_srai_epi32(qh,shift);
+		ql	 = _mm_max_epi32(_mm_set1_epi32(0),_mm_min_epi32(_mm_set1_epi32(255),ql));
+		qh	 = _mm_max_epi32(_mm_set1_epi32(0),_mm_min_epi32(_mm_set1_epi32(255),qh));
+		_mm_storeu_si128((__m128i *) (inter),ql);
+		for(i =0; i < 4; i++) 
+		{	q[i*incr]=inter[i];		
+		}
+		_mm_storeu_si128((__m128i *) (inter),qh);
+		for(i =0; i < 4; i++) 
+		{	q[(i+4)*incr]=inter[i];		
+		}
+		
+		ql	 = _mm_add_epi32(xl,_mm_sub_epi32(rnd_m,_mm_add_epi32(_mm_mullo_epi32(yl,cgb_m),_mm_mullo_epi32(zl,cgr_m))));
+		ql	 = _mm_srai_epi32(ql,shift);
+		qh	 = _mm_add_epi32(xh,_mm_sub_epi32(rnd_m,_mm_add_epi32(_mm_mullo_epi32(yh,cgb_m),_mm_mullo_epi32(zh,cgr_m))));
+		qh	 = _mm_srai_epi32(qh,shift);
+		ql	 = _mm_max_epi32(_mm_set1_epi32(0),_mm_min_epi32(_mm_set1_epi32(255),ql));
+		qh	 = _mm_max_epi32(_mm_set1_epi32(0),_mm_min_epi32(_mm_set1_epi32(255),qh));
+		_mm_storeu_si128((__m128i *) (inter),ql);
+		for(i =0; i < 4; i++) 
+		{	q[1+i*incr]=inter[i];		
+		}
+		_mm_storeu_si128((__m128i *) (inter),qh);
+		for(i =0; i < 4; i++) 
+		{	q[1+(i+4)*incr]=inter[i];		
+		}
+		
+		ql	 = _mm_add_epi32(xl,_mm_add_epi32(rnd_m,_mm_mullo_epi32(yl,cbb_m)));
+		ql	 = _mm_srai_epi32(ql,shift);
+		qh	 = _mm_add_epi32(xh,_mm_add_epi32(rnd_m,_mm_mullo_epi32(yh,cbb_m)));
+		qh	 = _mm_srai_epi32(qh,shift);
+		ql	 = _mm_max_epi32(_mm_set1_epi32(0),_mm_min_epi32(_mm_set1_epi32(255),ql));
+		qh	 = _mm_max_epi32(_mm_set1_epi32(0),_mm_min_epi32(_mm_set1_epi32(255),qh));
+		_mm_storeu_si128((__m128i *) (inter),ql);
+		for(i =0; i < 4; i++) 
+		{	q[2+i*incr]=inter[i];		
+		}
+		_mm_storeu_si128((__m128i *) (inter),qh);
+		for(i =0; i < 4; i++) 
+		{	q[2+(i+4)*incr]=inter[i];		
+		}
+		q +=8*incr;
+		
+		}		
+    for(x =n-yu; x < n; x++) {
         y_val = y_ptr[x] * c_one;
         cb_val = cb_ptr[x] - center;
         cr_val = cr_ptr[x] - center;
