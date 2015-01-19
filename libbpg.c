@@ -824,8 +824,33 @@ static void interp2_vh(PIXEL *dst, PIXEL **src, int n, int y_pos,
     else
         interp2p1_simple16(dst, tmp_buf + ITAPS2 - 1, n, bit_depth);
 }
+static void rgb_to_rgb24(ColorConvertState *s, uint8_t *dst, const PIXEL *y_ptr,
+                         const PIXEL *cb_ptr, const PIXEL *cr_ptr,
+                         int n, int incr)
+{
+    uint8_t *q = dst;
+    int x, c, rnd, shift;
 
-static void ycc_to_rgb24(ColorConvertState *s, uint8_t *dst, const PIXEL *y_ptr,
+    if (s->bit_depth == 8 && !s->limited_range) {
+        for(x = 0; x < n; x++) {
+            q[0] = cr_ptr[x];
+            q[1] = y_ptr[x];
+            q[2] = cb_ptr[x];
+            q += incr;
+        }
+    } else {
+        c = s->y_one;
+        rnd = s->y_offset;
+        shift = s->c_shift;
+        for(x = 0; x < n; x++) {
+            q[0] = clamp8((cr_ptr[x] * c + rnd) >> shift);
+            q[1] = clamp8((y_ptr[x] * c + rnd) >> shift);
+            q[2] = clamp8((cb_ptr[x] * c + rnd) >> shift);
+            q += incr;
+        }
+    }
+}
+static void ycc_to_rgb24_sse(ColorConvertState *s, uint8_t *dst, const PIXEL *y_ptr,
                          const PIXEL *cb_ptr, const PIXEL *cr_ptr,
                          int n, int incr)
 {
